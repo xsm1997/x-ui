@@ -50,6 +50,7 @@ const XTLS_FLOW_CONTROL = {
 
 const TLS_FLOW_CONTROL = {
     VISION: "xtls-rprx-vision",
+    VISION_NONE: "xtls-rprx-vision,none",
 };
 
 const TLS_VERSION_OPTION = {
