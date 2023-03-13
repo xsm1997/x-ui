@@ -1,9 +1,5 @@
-# x-ui
-![](https://img.shields.io/github/v/release/alireza0/x-ui.svg) 
-![](https://img.shields.io/docker/pulls/alireza7/x-ui.svg)
-[![Go Report Card](https://goreportcard.com/badge/github.com/alireza0/x-ui)](https://goreportcard.com/report/github.com/alireza0/x-ui)
-[![Downloads](https://img.shields.io/github/downloads/alireza0/x-ui/total.svg)](https://img.shields.io/github/downloads/alireza0/x-ui/total.svg)
-[![License](https://img.shields.io/badge/license-GPL%20V3-blue.svg?longCache=true)](https://www.gnu.org/licenses/gpl-3.0.en.html)
+# 自用x-ui
+
 > **Disclaimer: This project is only for personal learning and communication, please do not use it for illegal purposes, please do not use it in a production environment**
 
 xray panel supporting multi-protocol, **Multi-lang (English,Farsi,Chinese)**
@@ -40,12 +36,12 @@ xray panel supporting multi-protocol, **Multi-lang (English,Farsi,Chinese)**
 # Install & Upgrade
 
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/alireza0/x-ui/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/xsm1997/x-ui/master/install.sh)
 ```
 
 ## Manual install & upgrade
 
-1. First download the latest compressed package from https://github.com/alireza0/x-ui/releases , generally choose Architecture `amd64`
+1. First download the latest compressed package from https://github.com/xsm1997/x-ui/releases , generally choose Architecture `amd64`
 2. Then upload the compressed package to the server's `/root/` directory and `root` rootlog in to the server with user
 
 > If your server cpu architecture is not `amd64` replace another architecture
@@ -205,7 +201,3 @@ find this in config :
 - [HexaSoftwareTech](https://github.com/HexaSoftwareTech/)
 - [FranzKafkaYu](https://github.com/FranzKafkaYu)
 - [MHSanaei](https://github.com/MHSanaei) 
-
-## Stargazers over time
-
-[![Stargazers over time](https://starchart.cc/alireza0/x-ui.svg)](https://starchart.cc/alireza0/x-ui)
