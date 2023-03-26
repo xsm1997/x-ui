@@ -7,6 +7,7 @@ xray panel supporting multi-protocol, **Multi-lang (English,Farsi,Chinese)**
 | Features        | Enable?           |
 | ------------- |:-------------:|
 | Multi-lang | :heavy_check_mark: |
+| Dark/Light Theme | :heavy_check_mark: |
 | Search in deep | :heavy_check_mark: |
 | Inbound Multi User | :heavy_check_mark: |
 | Multi User Traffic & Expiration time | :heavy_check_mark: |
@@ -20,6 +21,7 @@ xray panel supporting multi-protocol, **Multi-lang (English,Farsi,Chinese)**
 
 - System Status Monitoring
 - Search within all inbounds and clients
+- Support Dark/Light theme UI
 - Support multi-user multi-protocol, web page visualization operation
 - Supported protocols: vmess, vless, trojan, shadowsocks, dokodemo-door, socks, http
 - Support for configuring more transport configurations
@@ -32,11 +34,18 @@ xray panel supporting multi-protocol, **Multi-lang (English,Farsi,Chinese)**
 # Screenshot from Inbouds page
 
 ![inbounds](./media/inbounds.png)
+![Dark inbounds](./media/inbounds-dark.png)
 
-# Install & Upgrade
+# Install & Upgrade to latest version
 
 ```
 bash <(curl -Ls https://raw.githubusercontent.com/xsm1997/x-ui/master/install.sh)
+```
+
+## Install custom version
+To install your desired version you can add the version to the end of install command. Example for ver `0.4.0`:
+```
+bash <(curl -Ls https://raw.githubusercontent.com/alireza0/x-ui/master/install.sh) 0.4.0
 ```
 
 ## Manual install & upgrade
@@ -61,8 +70,6 @@ systemctl restart x-ui
 
 ## Install using docker
 
-> This docker tutorial and docker image are provided by [alireza0](https://github.com/alireza0)
-
 1. install docker
 
 ```shell
@@ -73,7 +80,9 @@ curl -fsSL https://get.docker.com | sh
 
 ```shell
 mkdir x-ui && cd x-ui
-docker run -itd --network=host \
+docker run -itd \
+    -p 54321:54321 -p 443:443 -p 80:80 \
+    -e XRAY_VMESS_AEAD_FORCED=false \
     -v $PWD/db/:/etc/x-ui/ \
     -v $PWD/cert/:/root/cert/ \
     --name x-ui --restart=unless-stopped \
@@ -109,8 +118,8 @@ certbot certonly --standalone --register-unsafely-without-email --non-interactiv
 X-UI supports daily traffic notification, panel login reminder and other functions through the Tg robot. To use the Tg robot, you need to apply for the specific application tutorial. You can refer to the [blog](https://coderfan.net/how-to-use-telegram-bot-to-alarm-you-when-someone-login-into-your-vps.html)
 Set the robot-related parameters in the panel background, including:
 
-- Tg Robot Token
-- Tg Robot ChatId
+- Tg robot Token
+- Tg robot ChatId
 - Tg robot cycle runtime, in crontab syntax
 - Tg robot Expiration threshold
 - Tg robot Traffic threshold
@@ -131,8 +140,9 @@ Reference syntax:
 - CPU threshold notification
 - Threshold for Expiration time and Traffic to report in advance
 - Support client report if client's telegram username is added to the end of `email` like 'test123@telegram_username'
+- Support telegram traffic report searched with UID (VMESS/VLESS) or Password (TROJAN) - anonymously
 - Menu based bot
-- Search client by email
+- Search client by email ( only admin )
 - Check all inbounds
 - Check server status
 - Check Exhausted users
@@ -145,6 +155,7 @@ Reference syntax:
 - CentOS 7+
 - Ubuntu 16+
 - Debian 8+
+- Fedora 36+
 
 # common problem
 

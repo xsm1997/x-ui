@@ -9,7 +9,9 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 	"x-ui/logger"
 	"x-ui/util/sys"
@@ -198,6 +200,30 @@ func (s *ServerService) GetXrayVersions() ([]string, error) {
 	return versions, nil
 }
 
+func (s *ServerService) StopXrayService() (string error) {
+
+	err := s.xrayService.StopXray()
+	if err != nil {
+		logger.Error("stop xray failed:", err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *ServerService) RestartXrayService() (string error) {
+
+	s.xrayService.StopXray()
+	defer func() {
+		err := s.xrayService.RestartXray(true)
+		if err != nil {
+			logger.Error("start xray failed:", err)
+		}
+	}()
+
+	return nil
+}
+
 func (s *ServerService) downloadXRay(version string) (string, error) {
 	osName := runtime.GOOS
 	arch := runtime.GOARCH
@@ -299,4 +325,27 @@ func (s *ServerService) UpdateXray(version string) error {
 
 	return nil
 
+}
+
+func (s *ServerService) GetLogs() ([]string, error) {
+	// Define the journalctl command and its arguments
+	var cmdArgs []string
+	if runtime.GOOS == "linux" {
+		cmdArgs = []string{"journalctl", "-u", "x-ui", "--no-pager", "-n", "100"}
+	} else {
+		return []string{"Unsupported operating system"}, nil
+	}
+
+	// Run the command
+	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(out.String(), "\n")
+
+	return lines, nil
 }
