@@ -15,6 +15,9 @@
         </span>
         <a-input v-model.trim="client.email"></a-input>
     </a-form-item>
+    <a-form-item label="{{ i18n "pages.inbounds.enable" }}">
+        <a-switch v-model="client.enable"></a-switch>
+    </a-form-item>
     <a-form-item label="password" v-if="inbound.protocol === Protocols.TROJAN">
         <a-input v-model.trim="client.password"></a-input>
     </a-form-item>
@@ -23,6 +26,12 @@
     </a-form-item>
     <a-form-item label='{{ i18n "additional" }} ID' v-if="inbound.protocol === Protocols.VMESS">
         <a-input type="number" v-model.number="client.alterId"></a-input>
+    </a-form-item>
+    <a-form-item label="Subscription" v-if="client.email">
+        <a-input v-model.trim="client.subId"></a-input>
+    </a-form-item>
+    <a-form-item label="Telegram ID" v-if="client.email">
+        <a-input v-model.trim="client.tgId"></a-input>
     </a-form-item>
     <a-form-item v-if="inbound.xtls" label="flow">
         <a-select v-model="client.flow" style="width: 150px" :dropdown-class-name="siderDrawer.isDarkTheme ? 'ant-card-dark' : ''">
