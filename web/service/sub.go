@@ -269,10 +269,10 @@ func (s *SubService) genVlessLink(inbound *model.Inbound, email string) string {
 		}
 	}
 
-	if security == "xtls" {
-		params["security"] = "xtls"
-		xtlsSetting, _ := stream["xtlsSettings"].(map[string]interface{})
-		alpns, _ := xtlsSetting["alpn"].([]interface{})
+	if security == "reality" {
+		params["security"] = "reality"
+		realitySetting, _ := stream["realitySettings"].(map[string]interface{})
+		alpns, _ := realitySetting["alpn"].([]interface{})
 		var alpn []string
 		for _, a := range alpns {
 			alpn = append(alpn, a.(string))
@@ -281,17 +281,27 @@ func (s *SubService) genVlessLink(inbound *model.Inbound, email string) string {
 			params["alpn"] = strings.Join(alpn, ",")
 		}
 
-		xtlsSettings, _ := searchKey(xtlsSetting, "settings")
-		if xtlsSetting != nil {
-			if sniValue, ok := searchKey(xtlsSettings, "serverName"); ok {
+		realitySettings, _ := searchKey(realitySetting, "settings")
+		if realitySetting != nil {
+			if sniValue, ok := searchKey(realitySettings, "serverName"); ok {
 				params["sni"], _ = sniValue.(string)
 			}
-			if fpValue, ok := searchKey(xtlsSettings, "fingerprint"); ok {
+			if fpValue, ok := searchKey(realitySettings, "fingerprint"); ok {
 				params["fp"], _ = fpValue.(string)
 			}
-			if insecure, ok := searchKey(xtlsSettings, "allowInsecure"); ok {
+			if insecure, ok := searchKey(realitySettings, "allowInsecure"); ok {
 				if insecure.(bool) {
 					params["allowInsecure"] = "1"
+				}
+			}
+			if publicKey, ok := searchKey(realitySettings, "publicKey"); ok {
+				params["pbk"] = publicKey.(string)
+			}
+			if shortIds, ok := searchKey(realitySettings, "shortIds"); ok {
+				shortIdsStr := shortIds.(string)
+				shortIdsArr := strings.Split(shortIdsStr, "\n")
+				if len(shortIdsArr) > 0 {
+					params["sid"] = shortIdsArr[0]
 				}
 			}
 		}
@@ -300,7 +310,7 @@ func (s *SubService) genVlessLink(inbound *model.Inbound, email string) string {
 			params["flow"] = clients[clientIndex].Flow
 		}
 
-		serverName, _ := xtlsSetting["serverName"].(string)
+		serverName, _ := realitySetting["serverName"].(string)
 		if serverName != "" {
 			address = serverName
 		}
@@ -408,43 +418,6 @@ func (s *SubService) genTrojanLink(inbound *model.Inbound, email string) string 
 		}
 
 		serverName, _ := tlsSetting["serverName"].(string)
-		if serverName != "" {
-			address = serverName
-		}
-	}
-
-	if security == "xtls" {
-		params["security"] = "xtls"
-		xtlsSetting, _ := stream["xtlsSettings"].(map[string]interface{})
-		alpns, _ := xtlsSetting["alpn"].([]interface{})
-		var alpn []string
-		for _, a := range alpns {
-			alpn = append(alpn, a.(string))
-		}
-		if len(alpn) > 0 {
-			params["alpn"] = strings.Join(alpn, ",")
-		}
-
-		xtlsSettings, _ := searchKey(xtlsSetting, "settings")
-		if xtlsSetting != nil {
-			if sniValue, ok := searchKey(xtlsSettings, "serverName"); ok {
-				params["sni"], _ = sniValue.(string)
-			}
-			if fpValue, ok := searchKey(xtlsSettings, "fingerprint"); ok {
-				params["fp"], _ = fpValue.(string)
-			}
-			if insecure, ok := searchKey(xtlsSettings, "allowInsecure"); ok {
-				if insecure.(bool) {
-					params["allowInsecure"] = "1"
-				}
-			}
-		}
-
-		if streamNetwork == "tcp" && len(clients[clientIndex].Flow) > 0 {
-			params["flow"] = clients[clientIndex].Flow
-		}
-
-		serverName, _ := xtlsSetting["serverName"].(string)
 		if serverName != "" {
 			address = serverName
 		}
