@@ -94,6 +94,7 @@ const UTLS_FINGERPRINT = {
 };
 
 const ALPN_OPTION = {
+    H3: "h3",
     H2: "h2",
     HTTP1: "http/1.1",
 };
@@ -920,16 +921,16 @@ class Inbound extends XrayCommonClass {
     isExpiry(index) {
         switch (this.protocol) {
             case Protocols.VMESS:
-                if(this.settings.vmesses[index]._expiryTime != null)
-                    return this.settings.vmesses[index]._expiryTime < new Date().getTime();
+                if(this.settings.vmesses[index].expiryTime > 0)
+                    return this.settings.vmesses[index].expiryTime < new Date().getTime();
                 return false
             case Protocols.VLESS:
-                if(this.settings.vlesses[index]._expiryTime != null)
-                    return this.settings.vlesses[index]._expiryTime < new Date().getTime();
+                if(this.settings.vlesses[index].expiryTime > 0)
+                    return this.settings.vlesses[index].expiryTime < new Date().getTime();
                 return false
                 case Protocols.TROJAN:
-                    if(this.settings.trojans[index]._expiryTime != null)
-                        return this.settings.trojans[index]._expiryTime < new Date().getTime();
+                    if(this.settings.trojans[index].expiryTime > 0)
+                        return this.settings.trojans[index].expiryTime < new Date().getTime();
                     return false
             default:
                 return false;
@@ -1460,6 +1461,9 @@ Inbound.VmessSettings.Vmess = class extends XrayCommonClass {
         if (this.expiryTime === 0 || this.expiryTime === "") {
             return null;
         }
+        if (this.expiryTime < 0){
+            return this.expiryTime / -86400000;
+        }
         return moment(this.expiryTime);
     }
 
@@ -1547,6 +1551,9 @@ Inbound.VLESSSettings.VLESS = class extends XrayCommonClass {
     get _expiryTime() {
         if (this.expiryTime === 0 || this.expiryTime === "") {
             return null;
+        }
+        if (this.expiryTime < 0){
+            return this.expiryTime / -86400000;
         }
         return moment(this.expiryTime);
     }
@@ -1678,6 +1685,9 @@ Inbound.TrojanSettings.Trojan = class extends XrayCommonClass {
     get _expiryTime() {
         if (this.expiryTime === 0 || this.expiryTime === "") {
             return null;
+        }
+        if (this.expiryTime < 0){
+            return this.expiryTime / -86400000;
         }
         return moment(this.expiryTime);
     }

@@ -5,10 +5,10 @@
     </template>
     <a-form-item>
         <span slot="label">
-            Email
+            <span>{{ i18n "pages.inbounds.Email" }}</span>
             <a-tooltip>
                 <template slot="title">
-                    The email must be completely unique
+                    <span>{{ i18n "pages.inbounds.EmailDesc" }}</span>
                 </template>
                 <a-icon type="sync" @click="getNewEmail(client)"></a-icon>
             </a-tooltip>
@@ -30,7 +30,7 @@
     <a-form-item label="Subscription" v-if="client.email">
         <a-input v-model.trim="client.subId"></a-input>
     </a-form-item>
-    <a-form-item label="Telegram ID" v-if="client.email">
+    <a-form-item label="Telegram Username" v-if="client.email">
         <a-input v-model.trim="client.tgId"></a-input>
     </a-form-item>
     <a-form-item v-if="inbound.xtls" label="flow">
@@ -65,7 +65,13 @@
             </a-tag>
         </template>
     </a-form-item>
-    <a-form-item>
+    <a-form-item label="{{ i18n "pages.client.delayedStart" }}">
+        <a-switch v-model="clientModal.delayedStart" @click="client._expiryTime=0"></a-switch>
+    </a-form-item>
+    <a-form-item label="{{ i18n "pages.client.expireDays" }}" v-if="clientModal.delayedStart">
+        <a-input type="number" v-model.number="delayedExpireDays" :min="0"></a-input>
+    </a-form-item>
+    <a-form-item v-else>
         <span slot="label">
             <span >{{ i18n "pages.inbounds.expireDate" }}</span>
             <a-tooltip>
