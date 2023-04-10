@@ -479,7 +479,7 @@ class TlsStreamSettings extends XrayCommonClass {
                 maxVersion = TLS_VERSION_OPTION.TLS12,
                 cipherSuites = '',
                 certificates=[new TlsStreamSettings.Cert()],
-                alpn=[''],
+                alpn=[],
                 settings=[new TlsStreamSettings.Settings()]) {
         super();
         this.server = serverName;
@@ -1612,7 +1612,7 @@ Inbound.VLESSSettings.VLESS = class extends XrayCommonClass {
     }
 };
 Inbound.VLESSSettings.Fallback = class extends XrayCommonClass {
-    constructor(name="", alpn='', path='', dest='', xver=0) {
+    constructor(name="", alpn=[], path='', dest='', xver=0) {
         super();
         this.name = name;
         this.alpn = alpn;
@@ -1748,7 +1748,7 @@ Inbound.TrojanSettings.Trojan = class extends XrayCommonClass {
 };
 
 Inbound.TrojanSettings.Fallback = class extends XrayCommonClass {
-    constructor(name="", alpn='', path='', dest='', xver=0) {
+    constructor(name="", alpn=[], path='', dest='', xver=0) {
         super();
         this.name = name;
         this.alpn = alpn;
