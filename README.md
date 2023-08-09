@@ -2,69 +2,27 @@
 
 > **Disclaimer: This project is only for personal learning and communication, please do not use it for illegal purposes, please do not use it in a production environment**
 
-xray panel supporting multi-protocol, **Multi-lang (English,Farsi,Chinese)**
+xray panel supporting multi-protocol, **Multi-lang (English,Farsi,Chinese,Russian)**
 
-| Features        | Enable?           |
-| ------------- |:-------------:|
-| Multi-lang | :heavy_check_mark: |
-| Dark/Light Theme | :heavy_check_mark: |
-| Search in deep | :heavy_check_mark: |
-| Inbound Multi User | :heavy_check_mark: |
+| Features                             |      Enable?       |
+| ------------------------------------ | :----------------: |
+| Multi-lang                           | :heavy_check_mark: |
+| Dark/Light Theme                     | :heavy_check_mark: |
+| Search in deep                       | :heavy_check_mark: |
+| Inbound Multi User                   | :heavy_check_mark: |
 | Multi User Traffic & Expiration time | :heavy_check_mark: |
-| REST API | :heavy_check_mark: |
-| Telegram BOT (admin + clients) | :heavy_check_mark: |
-| Backup database using Telegram BOT | :heavy_check_mark: |
-| Subscription link | :heavy_check_mark: |
+| REST API                             | :heavy_check_mark: |
+| Telegram BOT (admin + clients)       | :heavy_check_mark: |
+| Backup database using Telegram BOT   | :heavy_check_mark: |
+| Subscription link + userInfo         | :heavy_check_mark: |
 | Calculate expire date on first usage | :heavy_check_mark: |
 
-**If you think this project is helpful to you, you may wish to give a** :star2: 
+**If you think this project is helpful to you, you may wish to give a** :star2:
 
-# Features
+**Buy Me a Coffee :**
 
-- System Status Monitoring
-- Search within all inbounds and clients
-- Support Dark/Light theme UI
-- Support multi-user multi-protocol, web page visualization operation
-- Supported protocols: vmess, vless, trojan, shadowsocks, dokodemo-door, socks, http
-- Support for configuring more transport configurations
-- Traffic statistics, limit traffic, limit expiration time
-- Customizable xray configuration templates
-- Support subscription ( multi ) link
-- Detect users which are expiring or exceed traffic limit soon
-- Support https access panel (self-provided domain name + ssl certificate)
-- Support one-click SSL certificate application and automatic renewal
-- For more advanced configuration items, please refer to the panel
-
-## API routes
-
-- `/login` with `PUSH` user data: `{username: '', password: ''}` for login
-- `/xui/API/inbounds` base for following actions:
-
-| Method | Path | Action |
-| ------------- | ------------- | ------------- |
-| GET | "/" | Get all inbounds |
-| GET | "/get/:id" | Get inbound with inbound.id |
-| POST | "/add" | Add inbound |
-| POST | "/del/:id" | Delete Inbound |
-| POST | "/update/:id" | Update Inbound |
-| POST | "/addClient/" | Add Client to inbound |
-| POST | "/delClient/:email" | Delete Client |
-| POST | "/updateClient/:index" | Update Client |
-| POST | "/:id/resetClientTraffic/:email" | Reset Client's Traffic |
-| POST | "/resetAllTraffics" | Reset traffics of all inbounds |
-| POST | "/resetAllClientTraffics/:id" | Reset traffics of all clients in an inbound |
-
-# Screenshot from Inbouds page
-
-![inbounds](./media/inbounds.png)
-![Dark inbounds](./media/inbounds-dark.png)
-
-## suggestion system
-
-- CentOS 8+
-- Ubuntu 20+
-- Debian 8+
-- Fedora 36+
+- Tron USDT (TRC20): `TYTq73Gj6dJ67qe58JVPD9zpjW2cc9XgVz`
+- Tezos (XTZ): tz2Wnh2SsY1eezXrcLChu6idWpgdHzUFQcts
 
 # Install & Upgrade to latest version
 
@@ -73,9 +31,11 @@ bash <(curl -Ls https://raw.githubusercontent.com/xsm1997/x-ui/master/install.sh
 ```
 
 ## Install custom version
-To install your desired version you can add the version to the end of install command. Example for ver `0.4.0`:
-```
-bash <(curl -Ls https://raw.githubusercontent.com/alireza0/x-ui/master/install.sh) 0.4.0
+
+To install your desired version you can add the version to the end of install command. Example for ver `0.5.2`:
+
+```sh
+bash <(curl -Ls https://raw.githubusercontent.com/alireza0/x-ui/master/install.sh) 0.5.2
 ```
 
 ## Manual install & upgrade
@@ -85,10 +45,12 @@ bash <(curl -Ls https://raw.githubusercontent.com/alireza0/x-ui/master/install.s
 
 > If your server cpu architecture is not `amd64` replace another architecture
 
-```
+```sh
+ARCH=$(uname -m)
+[[ "${ARCH}" == "s390x" ]] && XUI_ARCH="s390x" || [[ "${ARCH}" == "aarch64" || "${ARCH}" == "arm64" ]] && XUI_ARCH="arm64" || XUI_ARCH="amd64"
 cd /root/
 rm x-ui/ /usr/local/x-ui/ /usr/bin/x-ui -rf
-tar zxvf x-ui-linux-amd64.tar.gz
+tar zxvf x-ui-linux-${XUI_ARCH}.tar.gz
 chmod +x x-ui/x-ui x-ui/bin/xray-linux-* x-ui/x-ui.sh
 cp x-ui/x-ui.sh /usr/bin/x-ui
 cp -f x-ui/x-ui.service /etc/systemd/system/
@@ -125,13 +87,76 @@ docker run -itd \
 docker build -t x-ui .
 ```
 
+# Features
+
+- System Status Monitoring
+- Search within all inbounds and clients
+- Support Dark/Light theme UI
+- Support multi-user multi-protocol, web page visualization operation
+- Support multi-domain configuration and multi-certificate inbounds
+- Supported protocols: vmess, vless, trojan, shadowsocks, dokodemo-door, socks, http
+- Support for configuring more transport configurations
+- Traffic statistics, limit traffic, limit expiration time
+- Customizable xray configuration templates
+- Support subscription ( multi ) link
+- Detect users which are expiring or exceed traffic limit soon
+- Support https access panel (self-provided domain name + ssl certificate)
+- Support one-click SSL certificate application and automatic renewal
+- For more advanced configuration items, please refer to the panel
+- Support export/import database from panel
+
+## suggestion system
+
+- CentOS 8+
+- Ubuntu 20+
+- Debian 10+
+- Fedora 36+
+
+## API routes
+
+- `/login` with `PUSH` user data: `{username: '', password: ''}` for login
+- `/xui/API/inbounds` base for following actions:
+
+| Method | Path                            | Action                                    |
+| :----: | ------------------------------- | ----------------------------------------- |
+| `GET`  | `"/"`                           | Get all inbounds                          |
+| `GET`  | `"/get/:id"`                    | Get inbound with inbound.id               |
+| `GET`  | `"/createbackup"`               | Telegram bot sends backup to admins       |
+| `POST` | `"/add"`                        | Add inbound                               |
+| `POST` | `"/del/:id"`                    | Delete Inbound                            |
+| `POST` | `"/update/:id"`                 | Update Inbound                            |
+| `POST` | `"/addClient/"`                 | Add Client to inbound                     |
+| `POST` | `"/:id/delClient/:clientId"`    | Delete Client by clientId\*               |
+| `POST` | `"/updateClient/:clientId"`     | Update Client by clientId\*               |
+| `POST` | `"/getClientTraffics/:email"`   | Get Client's Traffic                      |
+| `POST` | `"/resetAllTraffics"`           | Reset traffics of all inbounds            |
+| `POST` | `"/resetAllClientTraffics/:id"` | Reset inbound clients traffics (-1: all)  |
+| `POST` | `"/delDepletedClients/:id"`     | Delete inbound depleted clients (-1: all) |
+
+\*- The field `clientId` should be filled by:
+
+- `client.id` for VMESS and VLESS
+- `client.password` for TROJAN
+- `client.email` for Shadowsocks
+
+# Environment Variables
+
+| Variable       |                      Type                      | Default       |
+| -------------- | :--------------------------------------------: | :------------ |
+| XUI_LOG_LEVEL  | `"debug"` \| `"info"` \| `"warn"` \| `"error"` | `"info"`      |
+| XUI_DEBUG      |                   `boolean`                    | `false`       |
+| XUI_BIN_FOLDER |                    `string`                    | `"bin"`       |
+| XUI_DB_FOLDER  |                    `string`                    | `"/etc/x-ui"` |
+
+# Screenshot from Inbouds page
+
+![inbounds](./media/inbounds.png)
+![Dark inbounds](./media/inbounds-dark.png)
+
 ## SSL certificate application
+
 <details>
   <summary>Click for details</summary>
-
-### Cloudflare
-
-> This feature and tutorial are provided by [FranzKafkaYu](https://github.com/FranzKafkaYu)
 
 ### Certbot
 
@@ -142,13 +167,13 @@ ln -s /snap/bin/certbot /usr/bin/certbot
 
 certbot certonly --standalone --register-unsafely-without-email --non-interactive --agree-tos -d <Your Domain Name>
 ```
+
 </details>
 
 ## Tg robot use
+
 <details>
   <summary>Click for details</summary>
-
-> This feature and tutorial are provided by [FranzKafkaYu](https://github.com/FranzKafkaYu)
 
 X-UI supports daily traffic notification, panel login reminder and other functions through the Tg robot. To use the Tg robot, you need to apply for the specific application tutorial. You can refer to the [blog](https://coderfan.net/how-to-use-telegram-bot-to-alarm-you-when-someone-login-into-your-vps.html)
 Set the robot-related parameters in the panel background, including:
@@ -163,8 +188,8 @@ Set the robot-related parameters in the panel background, including:
 
 Reference syntax:
 
-- 30 * * * * * //Notify at the 30s of each point
-- 0 */10 * * * * //Notify at the first second of each 10 minutes
+- 30 \* \* \* \* \* //Notify at the 30s of each point
+- 0 \*/10 \* \* \* \* //Notify at the first second of each 10 minutes
 - @hourly // hourly notification
 - @daily // Daily notification (00:00 in the morning)
 - @every 8h // notify every 8 hours
@@ -176,16 +201,18 @@ Reference syntax:
 - CPU threshold notification
 - Threshold for Expiration time and Traffic to report in advance
 - Support client report menu if client's telegram username added to the user's configurations
-- Support telegram traffic report searched with UID (VMESS/VLESS) or Password (TROJAN) - anonymously
+- Support telegram traffic report searched with UUID (VMESS/VLESS) or Password (TROJAN) - anonymously
 - Menu based bot
 - Search client by email ( only admin )
 - Check all inbounds
 - Check server status
 - Check depleted users
 - Receive backup by request and in periodic reports
+- Multi language bot
 </details>
 
 # Common problem
+
 <details>
   <summary>Click for details</summary>
 ## Migrating from v2-ui
@@ -194,7 +221,7 @@ First install the latest version of x-ui on the server where v2-ui is installed,
 
 > Please `Close v2-ui` and `restart x-ui`, otherwise the inbound of v2-ui will cause a `port conflict with the inbound of x-ui`
 
-```
+```sh
 x-ui v2-ui
 ```
 
@@ -202,12 +229,15 @@ x-ui v2-ui
 
 **If you upgrade from an old version or other forks, for enable traffic for users you should do :**
 
-find this in config : 
-``` json
+find this in config :
+
+```json
  "policy": {
     "system": {
 ```
-**and add this just after  ` "policy": {` :**
+
+**and add this just after ` "policy": {` :**
+
 ```json
     "levels": {
       "0": {
@@ -218,6 +248,7 @@ find this in config :
 ```
 
 **the final output is like :**
+
 ```json
   "policy": {
     "levels": {
@@ -234,10 +265,12 @@ find this in config :
   },
   "routing": {
 ```
- restart panel
+
+restart panel
+
 </details>
 
 # a special thanks to
+
 - [HexaSoftwareTech](https://github.com/HexaSoftwareTech/)
-- [FranzKafkaYu](https://github.com/FranzKafkaYu)
-- [MHSanaei](https://github.com/MHSanaei) 
+- [MHSanaei](https://github.com/MHSanaei)

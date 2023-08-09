@@ -151,9 +151,9 @@ class DBInbound {
         }
     }
 
-    genLink(clientIndex) {
+    genLink(address=this.address, remark=this.remark, clientIndex=0) {
         const inbound = this.toInbound();
-        return inbound.genLink(this.address, this.remark, clientIndex);
+        return inbound.genLink(address, remark, clientIndex);
     }
     
 	get genInboundLinks() {
@@ -166,10 +166,12 @@ class AllSetting {
 
     constructor(data) {
         this.webListen = "";
+        this.webDomain = "";
         this.webPort = 54321;
         this.webCertFile = "";
         this.webKeyFile = "";
         this.webBasePath = "/";
+        this.sessionMaxAge = "";
         this.expireDiff = "";
         this.trafficDiff = "";
         this.tgBotEnable = false;
@@ -177,8 +179,19 @@ class AllSetting {
         this.tgBotChatId = "";
         this.tgRunTime = "@daily";
         this.tgBotBackup = false;
+        this.tgBotLoginNotify = false;
         this.tgCpu = "";
+        this.tgLang = "";
         this.xrayTemplateConfig = "";
+        this.subEnable = false;
+        this.subListen = "";
+        this.subPort = "2096";
+        this.subPath = "/sub/";
+        this.subDomain = "";
+        this.subCertFile = "";
+        this.subKeyFile = "";
+        this.subUpdates = 0;
+        this.subEncrypt = true;
 
         this.timeLocation = "Asia/Tehran";
 

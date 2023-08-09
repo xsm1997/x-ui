@@ -1,12 +1,17 @@
 package controller
 
 import (
+	"fmt"
+	"net/http"
+	"regexp"
 	"time"
 	"x-ui/web/global"
 	"x-ui/web/service"
 
 	"github.com/gin-gonic/gin"
 )
+
+var filenameRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+$`)
 
 type ServerController struct {
 	BaseController
@@ -41,6 +46,8 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.POST("/logs/:count", a.getLogs)
 	g.POST("/getConfigJson", a.getConfigJson)
 	g.GET("/getDb", a.getDb)
+	g.POST("/importDB", a.importDB)
+	g.POST("/getNewX25519Cert", a.getNewX25519Cert)
 }
 
 func (a *ServerController) refreshStatus() {
@@ -74,7 +81,7 @@ func (a *ServerController) getXrayVersion(c *gin.Context) {
 
 	versions, err := a.serverService.GetXrayVersions()
 	if err != nil {
-		jsonMsg(c, I18n(c, "getVersion"), err)
+		jsonMsg(c, I18nWeb(c, "getVersion"), err)
 		return
 	}
 
@@ -87,7 +94,7 @@ func (a *ServerController) getXrayVersion(c *gin.Context) {
 func (a *ServerController) installXray(c *gin.Context) {
 	version := c.Param("version")
 	err := a.serverService.UpdateXray(version)
-	jsonMsg(c, I18n(c, "install")+" xray", err)
+	jsonMsg(c, I18nWeb(c, "install")+" xray", err)
 }
 
 func (a *ServerController) stopXrayService(c *gin.Context) {
@@ -98,8 +105,8 @@ func (a *ServerController) stopXrayService(c *gin.Context) {
 		return
 	}
 	jsonMsg(c, "Xray stoped", err)
-
 }
+
 func (a *ServerController) restartXrayService(c *gin.Context) {
 	err := a.serverService.RestartXrayService()
 	if err != nil {
@@ -107,23 +114,20 @@ func (a *ServerController) restartXrayService(c *gin.Context) {
 		return
 	}
 	jsonMsg(c, "Xray restarted", err)
-
 }
 
 func (a *ServerController) getLogs(c *gin.Context) {
 	count := c.Param("count")
-	logs, err := a.serverService.GetLogs(count)
-	if err != nil {
-		jsonMsg(c, I18n(c, "getLogs"), err)
-		return
-	}
+	level := c.PostForm("level")
+	syslog := c.PostForm("syslog")
+	logs := a.serverService.GetLogs(count, level, syslog)
 	jsonObj(c, logs, nil)
 }
 
 func (a *ServerController) getConfigJson(c *gin.Context) {
 	configJson, err := a.serverService.GetConfigJson()
 	if err != nil {
-		jsonMsg(c, I18n(c, "getLogs"), err)
+		jsonMsg(c, "get config.json", err)
 		return
 	}
 	jsonObj(c, configJson, nil)
@@ -132,13 +136,52 @@ func (a *ServerController) getConfigJson(c *gin.Context) {
 func (a *ServerController) getDb(c *gin.Context) {
 	db, err := a.serverService.GetDb()
 	if err != nil {
-		jsonMsg(c, I18n(c, "getLogs"), err)
+		jsonMsg(c, "get Database", err)
 		return
 	}
+
+	filename := "x-ui.db"
+
+	if !filenameRegex.MatchString(filename) {
+		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("invalid filename"))
+		return
+	}
+
 	// Set the headers for the response
 	c.Header("Content-Type", "application/octet-stream")
-	c.Header("Content-Disposition", "attachment; filename=xui.db")
+	c.Header("Content-Disposition", "attachment; filename="+filename)
 
 	// Write the file contents to the response
 	c.Writer.Write(db)
+}
+
+func (a *ServerController) importDB(c *gin.Context) {
+	// Get the file from the request body
+	file, _, err := c.Request.FormFile("db")
+	if err != nil {
+		jsonMsg(c, "Error reading db file", err)
+		return
+	}
+	defer file.Close()
+	// Always restart Xray before return
+	defer a.serverService.RestartXrayService()
+	defer func() {
+		a.lastGetStatusTime = time.Now()
+	}()
+	// Import it
+	err = a.serverService.ImportDB(file)
+	if err != nil {
+		jsonMsg(c, "", err)
+		return
+	}
+	jsonObj(c, "Import DB", nil)
+}
+
+func (a *ServerController) getNewX25519Cert(c *gin.Context) {
+	cert, err := a.serverService.GetNewX25519Cert()
+	if err != nil {
+		jsonMsg(c, "get x25519 certificate", err)
+		return
+	}
+	jsonObj(c, cert, nil)
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -23,11 +24,13 @@ var xrayTemplateConfig string
 var defaultValueMap = map[string]string{
 	"xrayTemplateConfig": xrayTemplateConfig,
 	"webListen":          "",
+	"webDomain":          "",
 	"webPort":            "54321",
 	"webCertFile":        "",
 	"webKeyFile":         "",
 	"secret":             random.Seq(32),
 	"webBasePath":        "/",
+	"sessionMaxAge":      "0",
 	"expireDiff":         "0",
 	"trafficDiff":        "0",
 	"timeLocation":       "Asia/Tehran",
@@ -36,7 +39,18 @@ var defaultValueMap = map[string]string{
 	"tgBotChatId":        "",
 	"tgRunTime":          "@daily",
 	"tgBotBackup":        "false",
+	"tgBotLoginNotify":   "false",
 	"tgCpu":              "0",
+	"tgLang":             "en-US",
+	"subEnable":          "false",
+	"subListen":          "",
+	"subPort":            "2096",
+	"subPath":            "/sub/",
+	"subDomain":          "",
+	"subCertFile":        "",
+	"subKeyFile":         "",
+	"subUpdates":         "12",
+	"subEncrypt":         "true",
 }
 
 type SettingService struct {
@@ -198,6 +212,10 @@ func (s *SettingService) GetListen() (string, error) {
 	return s.getString("webListen")
 }
 
+func (s *SettingService) GetWebDomain() (string, error) {
+	return s.getString("webDomain")
+}
+
 func (s *SettingService) GetTgBotToken() (string, error) {
 	return s.getString("tgBotToken")
 }
@@ -234,16 +252,16 @@ func (s *SettingService) GetTgBotBackup() (bool, error) {
 	return s.getBool("tgBotBackup")
 }
 
-func (s *SettingService) SetTgBotBackup(value bool) error {
-	return s.setBool("tgBotBackup", value)
+func (s *SettingService) GetTgBotLoginNotify() (bool, error) {
+	return s.getBool("tgBotLoginNotify")
 }
 
 func (s *SettingService) GetTgCpu() (int, error) {
 	return s.getInt("tgCpu")
 }
 
-func (s *SettingService) SetTgCpu(value int) error {
-	return s.setInt("tgCpu", value)
+func (s *SettingService) GetTgLang() (string, error) {
+	return s.getString("tgLang")
 }
 
 func (s *SettingService) GetPort() (int, error) {
@@ -266,16 +284,12 @@ func (s *SettingService) GetExpireDiff() (int, error) {
 	return s.getInt("expireDiff")
 }
 
-func (s *SettingService) SetExpireDiff(value int) error {
-	return s.setInt("expireDiff", value)
-}
-
 func (s *SettingService) GetTrafficDiff() (int, error) {
 	return s.getInt("trafficDiff")
 }
 
-func (s *SettingService) SetgetTrafficDiff(value int) error {
-	return s.setInt("trafficDiff", value)
+func (s *SettingService) GetSessionMaxAge() (int, error) {
+	return s.getInt("sessionMaxAge")
 }
 
 func (s *SettingService) GetSecret() ([]byte, error) {
@@ -317,6 +331,52 @@ func (s *SettingService) GetTimeLocation() (*time.Location, error) {
 	return location, nil
 }
 
+func (s *SettingService) GetSubEnable() (bool, error) {
+	return s.getBool("subEnable")
+}
+
+func (s *SettingService) GetSubListen() (string, error) {
+	return s.getString("subListen")
+}
+
+func (s *SettingService) GetSubPort() (int, error) {
+	return s.getInt("subPort")
+}
+
+func (s *SettingService) GetSubPath() (string, error) {
+	subPath, err := s.getString("subPath")
+	if err != nil {
+		return "", err
+	}
+	if !strings.HasPrefix(subPath, "/") {
+		subPath = "/" + subPath
+	}
+	if !strings.HasSuffix(subPath, "/") {
+		subPath += "/"
+	}
+	return subPath, nil
+}
+
+func (s *SettingService) GetSubDomain() (string, error) {
+	return s.getString("subDomain")
+}
+
+func (s *SettingService) GetSubCertFile() (string, error) {
+	return s.getString("subCertFile")
+}
+
+func (s *SettingService) GetSubKeyFile() (string, error) {
+	return s.getString("subKeyFile")
+}
+
+func (s *SettingService) GetSubUpdates() (int, error) {
+	return s.getInt("subUpdates")
+}
+
+func (s *SettingService) GetSubEncrypt() (bool, error) {
+	return s.getBool("subEncrypt")
+}
+
 func (s *SettingService) UpdateAllSetting(allSetting *entity.AllSetting) error {
 	if err := allSetting.CheckValid(); err != nil {
 		return err
@@ -336,4 +396,13 @@ func (s *SettingService) UpdateAllSetting(allSetting *entity.AllSetting) error {
 		}
 	}
 	return common.Combine(errs...)
+}
+
+func (s *SettingService) GetDefaultXrayConfig() (interface{}, error) {
+	var jsonData interface{}
+	err := json.Unmarshal([]byte(xrayTemplateConfig), &jsonData)
+	if err != nil {
+		return nil, err
+	}
+	return jsonData, nil
 }

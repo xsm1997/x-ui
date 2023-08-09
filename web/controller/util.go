@@ -1,23 +1,15 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
 	"net"
 	"net/http"
 	"strings"
 	"x-ui/config"
 	"x-ui/logger"
 	"x-ui/web/entity"
+
+	"github.com/gin-gonic/gin"
 )
-
-func getUriId(c *gin.Context) int64 {
-	s := struct {
-		Id int64 `uri:"id"`
-	}{}
-
-	_ = c.BindUri(&s)
-	return s.Id
-}
 
 func getRemoteIp(c *gin.Context) string {
 	value := c.GetHeader("X-Forwarded-For")
@@ -46,12 +38,12 @@ func jsonMsgObj(c *gin.Context, msg string, obj interface{}, err error) {
 	if err == nil {
 		m.Success = true
 		if msg != "" {
-			m.Msg = msg + I18n(c, "success")
+			m.Msg = msg + I18nWeb(c, "success")
 		}
 	} else {
 		m.Success = false
-		m.Msg = msg + I18n(c, "fail") + ": " + err.Error()
-		logger.Warning(msg+I18n(c, "fail")+": ", err)
+		m.Msg = msg + I18nWeb(c, "fail") + ": " + err.Error()
+		logger.Warning(msg+I18nWeb(c, "fail")+": ", err)
 	}
 	c.JSON(http.StatusOK, m)
 }
@@ -75,6 +67,7 @@ func html(c *gin.Context, name string, title string, data gin.H) {
 		data = gin.H{}
 	}
 	data["title"] = title
+	data["host"] = strings.Split(c.Request.Host, ":")[0]
 	data["request_uri"] = c.Request.RequestURI
 	data["base_path"] = c.GetString("base_path")
 	c.HTML(http.StatusOK, name, getContext(data))
@@ -84,10 +77,8 @@ func getContext(h gin.H) gin.H {
 	a := gin.H{
 		"cur_ver": config.GetVersion(),
 	}
-	if h != nil {
-		for key, value := range h {
-			a[key] = value
-		}
+	for key, value := range h {
+		a[key] = value
 	}
 	return a
 }

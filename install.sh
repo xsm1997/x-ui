@@ -61,8 +61,8 @@ elif [[ "${release}" == "fedora" ]]; then
     fi
 
 elif [[ "${release}" == "debian" ]]; then
-    if [[ ${os_version} -lt 8 ]]; then
-        echo -e "${red} Please use Debian 8 or higher ${plain}\n" && exit 1
+    if [[ ${os_version} -lt 10 ]]; then
+        echo -e "${red} Please use Debian 10 or higher ${plain}\n" && exit 1
     fi
 else
     echo -e "${red}Failed to check the OS version, please contact the author!${plain}" && exit 1
@@ -81,7 +81,7 @@ install_base() {
 config_after_install() {
     echo -e "${yellow}Install/update finished! For security it's recommended to modify panel settings ${plain}"
     read -p "Do you want to continue with the modification [y/n]? ": config_confirm
-    if [[ x"${config_confirm}" == x"y" || x"${config_confirm}" == x"Y" ]]; then
+    if [[ "${config_confirm}" == "y" || "${config_confirm}" == "Y" ]]; then
         read -p "Please set up your username:" config_account
         echo -e "${yellow}Your username will be:${config_account}${plain}"
         read -p "Please set up your password:" config_password
@@ -94,12 +94,25 @@ config_after_install() {
         /usr/local/x-ui/x-ui setting -port ${config_port}
         echo -e "${yellow}Panel port set successfully!${plain}"
     else
-        echo -e "${red}Canceled, will use the default settings.${plain}"
+        echo -e "${red}cancel...${plain}"
+        if [[ ! -f "/etc/x-ui/x-ui.db" ]]; then
+            local usernameTemp=$(head -c 6 /dev/urandom | base64)
+            local passwordTemp=$(head -c 6 /dev/urandom | base64)
+            /usr/local/x-ui/x-ui setting -username ${usernameTemp} -password ${passwordTemp}
+            echo -e "this is a fresh installation,will generate random login info for security concerns:"
+            echo -e "###############################################"
+            echo -e "${green}username:${usernameTemp}${plain}"
+            echo -e "${green}password:${passwordTemp}${plain}"
+            echo -e "###############################################"
+            echo -e "${red}if you forgot your login info,you can type x-ui and then type 7 to check after installation${plain}"
+        else
+            echo -e "${red} this is your upgrade,will keep old settings,if you forgot your login info,you can type x-ui and then type 7 to check${plain}"
+        fi
     fi
+    /usr/local/x-ui/x-ui migrate
 }
 
 install_x-ui() {
-    systemctl stop x-ui
     cd /usr/local/
 
     if [ $# == 0 ]; then
@@ -126,6 +139,7 @@ install_x-ui() {
     fi
 
     if [[ -e /usr/local/x-ui/ ]]; then
+        systemctl stop x-ui
         rm /usr/local/x-ui/ -rf
     fi
 

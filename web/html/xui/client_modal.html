@@ -1,7 +1,7 @@
 {{define "clientsModal"}}
 <a-modal id="client-modal" v-model="clientModal.visible" :title="clientModal.title" @ok="clientModal.ok"
          :confirm-loading="clientModal.confirmLoading" :closable="true" :mask-closable="false"
-         :class="siderDrawer.isDarkTheme ? darkClass : ''"
+         :class="themeSwitcher.darkCardClass"
          :ok-text="clientModal.okText" cancel-text='{{ i18n "close" }}'>
     {{template "form/client"}}
 </a-modal>
@@ -12,17 +12,22 @@
         confirmLoading: false,
         title: '',
         okText: '',
+        isEdit: false,
         dbInbound: new DBInbound(),
         inbound: new Inbound(),
         clients: [],
         clientStats: [],
+        oldClientId: "",
         index: null,
-        isExpired: false,
         delayedStart: false,
         ok() {
-            ObjectUtil.execute(clientModal.confirm, clientModal.inbound, clientModal.dbInbound, clientModal.index);
+            if(clientModal.isEdit){
+                ObjectUtil.execute(clientModal.confirm, clientModalApp.client, clientModal.dbInbound.id, clientModal.oldClientId);
+            } else {
+                ObjectUtil.execute(clientModal.confirm, clientModalApp.client, clientModal.dbInbound.id);
+            }
         },
-        show({ title='', okText='{{ i18n "sure" }}', index=null, dbInbound=null, confirm=(index, dbInbound)=>{}, isEdit=false  }) {
+        show({ title='', okText='{{ i18n "sure" }}', index=null, dbInbound=null, confirm=()=>{}, isEdit=false  }) {
             this.visible = true;
             this.title = title;
             this.okText = okText;
@@ -31,14 +36,14 @@
             this.inbound = dbInbound.toInbound();
             this.clients = this.getClients(this.inbound.protocol, this.inbound.settings);
             this.index = index === null ? this.clients.length : index;
-            this.isExpired = isEdit ? this.inbound.isExpiry(this.index) : false;
             this.delayedStart = false;
-            if (!isEdit){
-                this.addClient(this.inbound.protocol, this.clients);
-            } else {
+            if (isEdit){
                 if (this.clients[index].expiryTime < 0){
                     this.delayedStart = true;
                 }
+                this.oldClientId = this.getClientId(dbInbound.protocol,clients[index]);
+            } else {
+                this.addClient(this.inbound.protocol, this.clients);
             }
             this.clientStats = this.dbInbound.clientStats.find(row => row.email === this.clients[this.index].email);
             this.confirm = confirm;
@@ -48,7 +53,15 @@
                 case Protocols.VMESS: return clientSettings.vmesses;
                 case Protocols.VLESS: return clientSettings.vlesses;
                 case Protocols.TROJAN: return clientSettings.trojans;
+                case Protocols.SHADOWSOCKS: return clientSettings.shadowsockses;
                 default: return null;
+            }
+        },
+        getClientId(protocol, client) {
+            switch(protocol){
+                case Protocols.TROJAN: return client.password;
+                case Protocols.SHADOWSOCKS: return client.email;
+                default: return client.id;
             }
         },
         addClient(protocol, clients) {
@@ -56,6 +69,7 @@
                 case Protocols.VMESS: return clients.push(new Inbound.VmessSettings.Vmess());
                 case Protocols.VLESS: return clients.push(new Inbound.VLESSSettings.VLESS());
                 case Protocols.TROJAN: return clients.push(new Inbound.TrojanSettings.Trojan());
+                case Protocols.SHADOWSOCKS: return clients.push(new Inbound.ShadowsocksSettings.Shadowsocks(clients[0].method));
                 default: return null;
             }
         },
@@ -92,13 +106,10 @@
                 return true
             },
             get isExpiry() {
-                return this.clientModal.isExpired
+                return this.clientModal.isEdit && this.client.expiryTime >0 ? (this.client.expiryTime < new Date().getTime())  : false;
             },
             get statsColor() {
-                if(!clientStats) return 'blue'
-                if(clientStats.total <= 0) return 'blue'
-                else if(clientStats.total > 0 && (clientStats.down+clientStats.up) < clientStats.total) return 'cyan'
-                else return 'red'
+                return usageColor(clientStats.up + clientStats.down, app.trafficDiff, this.client.totalGB);
             },
             get delayedExpireDays() {
                 return this.client && this.client.expiryTime < 0 ? this.client.expiryTime / -86400000 : 0;
@@ -116,6 +127,24 @@
                     string += chars[Math.floor(Math.random() * chars.length)];
                 }
                 client.email = string;
+            },
+            resetClientTraffic(email,dbInboundId,iconElement) {
+                this.$confirm({
+                    title: '{{ i18n "pages.inbounds.resetTraffic"}}',
+                    content: '{{ i18n "pages.inbounds.resetTrafficContent"}}',
+                    class: themeSwitcher.darkCardClass,
+                    okText: '{{ i18n "reset"}}',
+                    cancelText: '{{ i18n "cancel"}}',
+                    onOk: async () => {
+                        iconElement.disabled = true;
+                        const msg = await HttpUtil.postWithModal('/xui/inbound/' + dbInboundId + '/resetClientTraffic/'+ email);
+                        if (msg.success) {
+                            this.clientModal.clientStats.up = 0;
+                            this.clientModal.clientStats.down = 0;
+                        }
+                        iconElement.disabled = false;
+                    },
+                })
             },
         },
     });

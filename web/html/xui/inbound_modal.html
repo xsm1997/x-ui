@@ -1,7 +1,7 @@
 {{define "inboundModal"}}
 <a-modal id="inbound-modal" v-model="inModal.visible" :title="inModal.title" @ok="inModal.ok"
          :confirm-loading="inModal.confirmLoading" :closable="true" :mask-closable="false"
-         :class="siderDrawer.isDarkTheme ? darkClass : ''"
+         :class="themeSwitcher.darkCardClass"
          :ok-text="inModal.okText" cancel-text='{{ i18n "close" }}'>
     {{template "form/inbound"}}
 </a-modal>
@@ -43,16 +43,15 @@
         loading(loading) {
             inModal.confirmLoading = loading;
         },
-    };
-
-    const protocols = {
-        VMESS: Protocols.VMESS,
-        VLESS: Protocols.VLESS,
-        TROJAN: Protocols.TROJAN,
-        SHADOWSOCKS: Protocols.SHADOWSOCKS,
-        DOKODEMO: Protocols.DOKODEMO,
-        SOCKS: Protocols.SOCKS,
-        HTTP: Protocols.HTTP,
+        getClients(protocol, clientSettings) {
+            switch(protocol){
+                case Protocols.VMESS: return clientSettings.vmesses;
+                case Protocols.VLESS: return clientSettings.vlesses;
+                case Protocols.TROJAN: return clientSettings.trojans;
+                case Protocols.SHADOWSOCKS: return clientSettings.shadowsockses;
+                default: return null;
+            }
+        },
     };
 
     new Vue({
@@ -60,8 +59,7 @@
         el: '#inbound-modal',
         data: {
             inModal: inModal,
-            Protocols: protocols,
-            SSMethods: SSMethods,
+            delayedStart: false,
             get inbound() {
                 return inModal.inbound;
             },
@@ -70,35 +68,76 @@
             },
             get isEdit() {
                 return inModal.isEdit;
+            },
+            get client() {
+                return inModal.getClients(this.inbound.protocol, this.inbound.settings)[0];
+            },
+            get delayedExpireDays() {
+                return this.client && this.client.expiryTime < 0 ? this.client.expiryTime / -86400000 : 0;
+            },
+            set delayedExpireDays(days){
+                this.client.expiryTime = -86400000 * days;
+            },
+            get multiDomain() {
+                return this.inbound.stream.tls.settings.domains.length > 0;
+            },
+            set multiDomain(value) {
+                if (value) {
+                    inModal.inbound.stream.tls.server = "";
+                    inModal.inbound.stream.tls.settings.domains = [{ remark: "", domain: window.location.hostname }];
+                } else {
+                    inModal.inbound.stream.tls.server = "";
+                    inModal.inbound.stream.tls.settings.domains = [];
+                }
             }
         },
         methods: {
-            streamNetworkChange(oldValue) {
-                if (oldValue === 'kcp') {
-                    this.inModal.inbound.tls = false;
+            streamNetworkChange() {
+                if (!inModal.inbound.canSetTls()) {
+                    this.inModal.inbound.stream.security = 'none';
+                }
+                if (!inModal.inbound.canEnableReality()) {
+                    this.inModal.inbound.reality = false;
+                }
+                if (this.inModal.inbound.protocol == Protocols.VLESS && !inModal.inbound.canEnableTlsFlow()) {
+                    this.inModal.inbound.settings.vlesses.forEach(client => {
+                        client.flow = "";
+                    });
                 }
             },
-            addClient(protocol, clients) {
-                switch (protocol) {
-                    case Protocols.VMESS: return clients.push(new Inbound.VmessSettings.Vmess());
-                    case Protocols.VLESS: return clients.push(new Inbound.VLESSSettings.VLESS());
-                    case Protocols.TROJAN: return clients.push(new Inbound.TrojanSettings.Trojan());
-                    default: return null;
+            SSMethodChange() {
+                if (this.inModal.inbound.isSSMultiUser) {
+                    if (this.inModal.inbound.settings.shadowsockses.length ==0){
+                        this.inModal.inbound.settings.shadowsockses = [new Inbound.ShadowsocksSettings.Shadowsocks()];
+                    }
+                    if (["aes-128-gcm", "aes-256-gcm", "chacha20-poly1305", "xchacha20-poly1305"].includes(this.inModal.inbound.settings.method)) {
+                        this.inModal.inbound.settings.shadowsockses.forEach(client => {
+                            client.method = this.inModal.inbound.settings.method;
+                        })
+                    } else {
+                        this.inModal.inbound.settings.shadowsockses.forEach(client => {
+                            client.method = "";
+                        })
+                    }
+                } else {
+                    if (this.inModal.inbound.settings.shadowsockses.length > 0){
+                        this.inModal.inbound.settings.shadowsockses = [];
+                    }
                 }
             },
-            removeClient(index, clients) {
-                clients.splice(index, 1);
+            setDefaultCertData(index){
+                inModal.inbound.stream.tls.certs[index].certFile = app.defaultCert;
+                inModal.inbound.stream.tls.certs[index].keyFile = app.defaultKey;
             },
-            isExpiry(index) {
-                return this.inbound.isExpiry(index)
-            },
-            isClientEnable(email) {
-                clientStats = this.dbInbound.clientStats ? this.dbInbound.clientStats.find(stats => stats.email === email) : null
-                return clientStats ? clientStats['enable'] : true
-            },
-            setDefaultCertData(){
-                inModal.inbound.stream.tls.certs[0].certFile = app.defaultCert;
-                inModal.inbound.stream.tls.certs[0].keyFile = app.defaultKey;
+            async getNewX25519Cert(){
+                inModal.loading(true);
+                const msg = await HttpUtil.post('/server/getNewX25519Cert');
+                inModal.loading(false);
+                if (!msg.success) {
+                    return;
+                }
+                inModal.inbound.stream.reality.privateKey = msg.obj.privateKey;
+                inModal.inbound.stream.reality.settings.publicKey = msg.obj.publicKey;
             },
             getNewEmail(client) {
                 var chars = 'abcdefghijklmnopqrstuvwxyz1234567890';

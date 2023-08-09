@@ -19,26 +19,35 @@
 <body>
 <a-layout id="app" v-cloak>
     {{ template "commonSider" . }}
-    <a-layout id="content-layout" :style="siderDrawer.isDarkTheme ? bgDarkStyle : ''">
+    <a-layout id="content-layout" :style="themeSwitcher.bgStyle">
         <a-layout-content>
             <a-spin :spinning="spinning" :delay="200" :tip="loadingTip"/>
             <transition name="list" appear>
+                <a-alert type="error" v-if="showAlert" style="margin-bottom: 10px"
+                message='{{ i18n "secAlertTitle" }}'
+                color="red"
+                description='{{ i18n "secAlertSsl" }}'
+                show-icon closable
+                >
+                </a-alert>
+            </transition>
+            <transition name="list" appear>
                 <a-row>
-                    <a-card hoverable :class="siderDrawer.isDarkTheme ? darkClass : ''">
+                    <a-card hoverable :class="themeSwitcher.darkCardClass">
                         <a-row>
                             <a-col :sm="24" :md="12">
                                 <a-row>
                                     <a-col :span="12" style="text-align: center">
                                         <a-progress type="dashboard" status="normal"
                                                     :stroke-color="status.cpu.color"
-                                                    :class="siderDrawer.isDarkTheme ? darkClass : ''"
+                                                    :class="themeSwitcher.darkCardClass"
                                                     :percent="status.cpu.percent"></a-progress>
-                                        <div>CPU</div>
+                                        <div>CPU ([[ status.cpuCount ]]core)</div>
                                     </a-col>
                                     <a-col :span="12" style="text-align: center">
                                         <a-progress type="dashboard" status="normal"
                                                     :stroke-color="status.mem.color"
-                                                    :class="siderDrawer.isDarkTheme ? darkClass : ''"
+                                                    :class="themeSwitcher.darkCardClass"
                                                     :percent="status.mem.percent"></a-progress>
                                         <div>
                                             {{ i18n "pages.index.memory"}}: [[ sizeFormat(status.mem.current) ]] / [[ sizeFormat(status.mem.total) ]]
@@ -51,7 +60,7 @@
                                     <a-col :span="12" style="text-align: center">
                                         <a-progress type="dashboard" status="normal"
                                                     :stroke-color="status.swap.color"
-                                                    :class="siderDrawer.isDarkTheme ? darkClass : ''"
+                                                    :class="themeSwitcher.darkCardClass"
                                                     :percent="status.swap.percent"></a-progress>
                                         <div>
                                             swap: [[ sizeFormat(status.swap.current) ]] / [[ sizeFormat(status.swap.total) ]]
@@ -60,7 +69,7 @@
                                     <a-col :span="12" style="text-align: center">
                                         <a-progress type="dashboard" status="normal"
                                                     :stroke-color="status.disk.color"
-                                                    :class="siderDrawer.isDarkTheme ? darkClass : ''"
+                                                    :class="themeSwitcher.darkCardClass"
                                                     :percent="status.disk.percent"></a-progress>
                                         <div>
                                             {{ i18n "pages.index.hard"}}: [[ sizeFormat(status.disk.current) ]] / [[ sizeFormat(status.disk.total) ]]
@@ -75,25 +84,28 @@
             <transition name="list" appear>
                 <a-row>
                     <a-col :sm="24" :md="12">
-                        <a-card hoverable :class="siderDrawer.isDarkTheme ? darkClass : ''">
-                            x-ui: <a-tag color="green">{{ .cur_ver }}</a-tag>
+                        <a-card hoverable :class="themeSwitcher.darkCardClass">
+                            x-ui: <a href="https://github.com/alireza0/x-ui/releases" target="_blank"><a-tag color="green">{{ .cur_ver }}</a-tag></a>
                             xray: <a-tag color="green" style="cursor: pointer;" @click="openSelectV2rayVersion">[[ status.xray.version ]]</a-tag>
                         </a-card>
                     </a-col>
                     <a-col :sm="24" :md="12">
-                        <a-card hoverable :class="siderDrawer.isDarkTheme ? darkClass : ''">
+                        <a-card hoverable :class="themeSwitcher.darkCardClass">
                             {{ i18n "pages.index.operationHours" }}:
-                            <a-tag color="green">[[ formatSecond(status.uptime) ]]</a-tag>
+                            xray
+                            <a-tag color="green">[[ formatSecond(status.appStats.uptime) ]]</a-tag>
+                            os
                             <a-tooltip>
                                 <template slot="title">
                                     {{ i18n "pages.index.operationHoursDesc" }}
                                 </template>
                                 <a-icon type="question-circle" theme="filled"></a-icon>
                             </a-tooltip>
+                            <a-tag color="green">[[ formatSecond(status.uptime) ]]</a-tag>
                         </a-card>
                     </a-col>
                     <a-col :sm="24" :md="12">
-                        <a-card hoverable :class="siderDrawer.isDarkTheme ? darkClass : ''">
+                        <a-card hoverable :class="themeSwitcher.darkCardClass">
                             {{ i18n "pages.index.xrayStatus" }}:
                             <a-tag :color="status.xray.color">[[ status.xray.state ]]</a-tag>
                             <a-tooltip v-if="status.xray.state === State.Error">
@@ -108,21 +120,50 @@
                         </a-card>
                     </a-col>
                     <a-col :sm="24" :md="12">
-                        <a-card hoverable :class="siderDrawer.isDarkTheme ? darkClass : ''">
+                        <a-card hoverable :class="themeSwitcher.darkCardClass">
                             {{ i18n "menu.link" }}:
-                            <a-tag color="blue" style="cursor: pointer;" @click="openLogs(20)">Logs</a-tag>
-                            <a-tag color="blue" style="cursor: pointer;" @click="openConfig">Config</a-tag>
-                            <a-tag color="blue" style="cursor: pointer;" @click="getBackup">Backup</a-tag>
+                            <a-tag color="blue" style="cursor: pointer;" @click="openLogs()">{{ i18n "pages.index.logs" }}</a-tag>
+                            <a-tag color="blue" style="cursor: pointer;" @click="openConfig">{{ i18n "pages.index.config" }}</a-tag>
+                            <a-tag color="blue" style="cursor: pointer;" @click="openBackup">{{ i18n "pages.index.backup" }}</a-tag>
                         </a-card>
                     </a-col>
                     <a-col :sm="24" :md="12">
-                        <a-card hoverable :class="siderDrawer.isDarkTheme ? darkClass : ''">
+                        <a-card hoverable :class="themeSwitcher.darkCardClass">
                             {{ i18n "pages.index.systemLoad" }}: [[ status.loads[0] ]] | [[ status.loads[1] ]] | [[ status.loads[2] ]]
                         </a-card>
                     </a-col>
                     <a-col :sm="24" :md="12">
-                        <a-card hoverable :class="siderDrawer.isDarkTheme ? darkClass : ''">
-                            tcp / udp {{ i18n "pages.index.connectionCount" }}: [[ status.tcpCount ]] / [[ status.udpCount ]]
+                        <a-card hoverable :class="themeSwitcher.darkCardClass">
+                            {{ i18n "usage"}}:
+                            Memory [[ sizeFormat(status.appStats.mem) ]] -
+                            Threads [[ status.appStats.threads ]]
+                            </a-tooltip>
+                        </a-card>
+                    </a-col>
+                    <a-col :sm="24" :md="12">
+                        <a-card hoverable :class="themeSwitcher.darkCardClass">
+                            Host: [[ status.hostInfo.hostname ]] -
+                            <template v-if="status.hostInfo.ipv4">IPv4:
+                            <a-tooltip>
+                                <template slot="title">
+                                    [[ status.hostInfo.ipv4 ]]
+                                </template>
+                                <a-icon type="question-circle" theme="filled"></a-icon>
+                            </a-tooltip>
+                            </template>
+                            <template v-if="status.hostInfo.ipv6">IPv6:
+                            <a-tooltip>
+                                <template slot="title">
+                                    [[ status.hostInfo.ipv6 ]]
+                                </template>
+                                <a-icon type="question-circle" theme="filled"></a-icon>
+                            </a-tooltip>
+                            </template>
+                        </a-card>
+                    </a-col>
+                    <a-col :sm="24" :md="12">
+                        <a-card hoverable :class="themeSwitcher.darkCardClass">
+                            {{ i18n "pages.index.connectionCount" }}: tcp: [[ status.tcpCount ]]  udp: [[ status.udpCount ]]
                             <a-tooltip>
                                 <template slot="title">
                                     {{ i18n "pages.index.connectionCountDesc" }}
@@ -132,7 +173,7 @@
                         </a-card>
                     </a-col>
                     <a-col :sm="24" :md="12">
-                        <a-card hoverable :class="siderDrawer.isDarkTheme ? darkClass : ''">
+                        <a-card hoverable :class="themeSwitcher.darkCardClass">
                             <a-row>
                                 <a-col :span="12">
                                     <a-icon type="arrow-up"></a-icon>
@@ -158,7 +199,7 @@
                         </a-card>
                     </a-col>
                     <a-col :sm="24" :md="12">
-                        <a-card hoverable :class="siderDrawer.isDarkTheme ? darkClass : ''">
+                        <a-card hoverable :class="themeSwitcher.darkCardClass">
                             <a-row>
                                 <a-col :span="12">
                                     <a-icon type="cloud-upload"></a-icon>
@@ -187,9 +228,10 @@
             </transition>
         </a-layout-content>
     </a-layout>
+
     <a-modal id="version-modal" v-model="versionModal.visible" title='{{ i18n "pages.index.xraySwitch" }}'
              :closable="true" @ok="() => versionModal.visible = false"
-             :class="siderDrawer.isDarkTheme ? darkClass : ''"
+             :class="themeSwitcher.darkCardClass"
              footer="">
         <h2>{{ i18n "pages.index.xraySwitchClick"}}</h2>
         <h2>{{ i18n "pages.index.xraySwitchClickDesk"}}</h2>
@@ -200,25 +242,40 @@
             </a-tag>
         </template>
     </a-modal>
+
     <a-modal id="log-modal" v-model="logModal.visible" title="X-UI logs"
              :closable="true" @ok="() => logModal.visible = false" @cancel="() => logModal.visible = false"
-             :class="siderDrawer.isDarkTheme ? darkClass : ''"
+             :class="themeSwitcher.darkCardClass"
              width="800px"
              footer="">
         <a-form layout="inline">
             <a-form-item label="Count">
                 <a-select v-model="logModal.rows"
                 style="width: 80px"
-                @change="openLogs(logModal.rows)"
-                :dropdown-class-name="siderDrawer.isDarkTheme ? 'ant-card-dark' : ''">
+                @change="openLogs()"
+                :dropdown-class-name="themeSwitcher.darkCardClass">
                     <a-select-option value="10">10</a-select-option>
                     <a-select-option value="20">20</a-select-option>
                     <a-select-option value="50">50</a-select-option>
                     <a-select-option value="100">100</a-select-option>
                 </a-select>
             </a-form-item>
+            <a-form-item label="Log Level">
+                <a-select v-model="logModal.level"
+                style="width: 120px"
+                @change="openLogs()"
+                :dropdown-class-name="themeSwitcher.darkCardClass">
+                    <a-select-option value="debug">Debug</a-select-option>
+                    <a-select-option value="info">Info</a-select-option>
+                    <a-select-option value="warning">Warning</a-select-option>
+                    <a-select-option value="err">Error</a-select-option>
+                </a-select>
+            </a-form-item>
+            <a-form-item label="SysLog">
+                <a-checkbox v-model="logModal.syslog" @change="openLogs()"></a-checkbox>
+            </a-form-item>
             <a-form-item>
-                <button class="ant-btn ant-btn-primary" @click="openLogs(logModal.rows)"><a-icon type="sync"></a-icon> Reload</button>
+                <button class="ant-btn ant-btn-primary" @click="openLogs()"><a-icon type="sync"></a-icon> Reload</button>
             </a-form-item>
             <a-form-item>
                 <a-button type="primary" style="margin-bottom: 10px;"
@@ -230,8 +287,27 @@
         <a-input type="textarea" v-model="logModal.logs" disabled="true"
                 :autosize="{ minRows: 10, maxRows: 22}"></a-input>
     </a-modal>
+
+    <a-modal id="backup-modal" v-model="backupModal.visible" :title="backupModal.title"
+            :closable="true" :class="themeSwitcher.darkCardClass"
+            @ok="() => backupModal.hide()" @cancel="() => backupModal.hide()">
+        <p style="color: inherit; font-size: 16px; padding: 4px 2px;">
+            <a-icon type="warning" style="color: inherit; font-size: 20px;"></a-icon>
+            [[ backupModal.description ]]
+        </p>
+        <a-space direction="horizontal" align="center" style="margin-bottom: 10px;">
+            <a-button type="primary" @click="exportDatabase()">
+                [[ backupModal.exportText ]]
+            </a-button>
+            <a-button type="primary" @click="importDatabase()">
+                [[ backupModal.importText ]]
+            </a-button>
+        </a-space>
+    </a-modal>
+
 </a-layout>
 {{template "js" .}}
+{{template "component/themeSwitcher" .}}
 {{template "textModal"}}
 <script>
 
@@ -271,6 +347,7 @@
     class Status {
         constructor(data) {
             this.cpu = new CurTotal(0, 0);
+            this.cpuCount = 0;
             this.disk = new CurTotal(0, 0);
             this.loads = [0, 0, 0];
             this.mem = new CurTotal(0, 0);
@@ -280,12 +357,16 @@
             this.tcpCount = 0;
             this.udpCount = 0;
             this.uptime = 0;
+            this.appUptime = 0;
+            this.appStats = {threads: 0, mem: 0, uptime: 0};
+            this.hostInfo = {hostname:"", ipv4: "", ipv6: ""};
             this.xray = {state: State.Stop, errorMsg: "", version: "", color: ""};
 
             if (data == null) {
                 return;
             }
             this.cpu = new CurTotal(data.cpu, 100);
+            this.cpuCount = data.cpuCount;
             this.disk = new CurTotal(data.disk.current, data.disk.total);
             this.loads = data.loads.map(load => toFixed(load, 2));
             this.mem = new CurTotal(data.mem.current, data.mem.total);
@@ -295,6 +376,9 @@
             this.tcpCount = data.tcpCount;
             this.udpCount = data.udpCount;
             this.uptime = data.uptime;
+            this.appUptime = data.appUptime;
+            this.appStats = data.appStats;
+            this.hostInfo = data.hostInfo;
             this.xray = data.xray;
             switch (this.xray.state) {
                 case State.Running:
@@ -328,10 +412,34 @@
         visible: false,
         logs: '',
         rows: 20,
-        show(logs, rows) {
+        level: 'info',
+        syslog: false,
+        show(logs) {
             this.visible = true;
-            this.rows = rows;
-            this.logs = logs.join("\n");
+            this.logs = logs? logs.join("\n"): "No Record...";
+        },
+        hide() {
+            this.visible = false;
+        },
+    };
+
+    const backupModal = {
+        visible: false,
+        title: '',
+        description: '',
+        exportText: '',
+        importText: '',
+        show({
+            title = '{{ i18n "pages.index.backupTitle" }}',
+            description = '{{ i18n "pages.index.backupDescription" }}',
+            exportText = '{{ i18n "pages.index.exportDatabase" }}',
+            importText = '{{ i18n "pages.index.importDatabase" }}',
+        }) {
+            this.title = title;
+            this.description = description;
+            this.exportText = exportText;
+            this.importText = importText;
+            this.visible = true;
         },
         hide() {
             this.visible = false;
@@ -343,11 +451,14 @@
         el: '#app',
         data: {
             siderDrawer,
+            themeSwitcher,
             status: new Status(),
             versionModal,
             logModal,
+            backupModal,
             spinning: false,
             loadingTip: '{{ i18n "loading"}}',
+            showAlert: false,
         },
         methods: {
             loading(spinning, tip = '{{ i18n "loading"}}') {
@@ -377,17 +488,16 @@
                     title: '{{ i18n "pages.index.xraySwitchVersionDialog"}}',
                     content: '{{ i18n "pages.index.xraySwitchVersionDialogDesc"}}' + ` ${version}?`,
                     okText: '{{ i18n "confirm"}}',
-                    class: siderDrawer.isDarkTheme ? darkClass : '',
+                    class: themeSwitcher.darkCardClass,
                     cancelText: '{{ i18n "cancel"}}',
                     onOk: async () => {
                         versionModal.hide();
-                        this.loading(true, '{{ i18n "pages.index.dontRefreshh"}}');
+                        this.loading(true, '{{ i18n "pages.index.dontRefresh"}}');
                         await HttpUtil.post(`/server/installXray/${version}`);
                         this.loading(false);
                     },
                 });
             },
-	        //here add stop xray function
             async stopXrayService() {
                 this.loading(true);
                 const msg = await HttpUtil.post('server/stopXrayService');
@@ -396,7 +506,6 @@
                     return;
                 }
             },
-            //here add restart xray function
             async restartXrayService() {
                 this.loading(true);
                 const msg = await HttpUtil.post('server/restartXrayService');
@@ -405,29 +514,72 @@
                     return;
                 }
             },
-            async openLogs(rows){
+            async openLogs(){
                 this.loading(true);
-                const msg = await HttpUtil.post('server/logs/'+rows);
+                const msg = await HttpUtil.post('server/logs/'+logModal.rows,{level: logModal.level, syslog: logModal.syslog});
                 this.loading(false);
                 if (!msg.success) {
                     return;
                 }
-                logModal.show(msg.obj,rows);
+                logModal.show(msg.obj);
             },
-            async openConfig(){
+            async openConfig() {
                 this.loading(true);
                 const msg = await HttpUtil.post('server/getConfigJson');
                 this.loading(false);
                 if (!msg.success) {
                     return;
                 }
-                txtModal.show('config.json',JSON.stringify(msg.obj, null, 2),'config.json');
+                txtModal.show('config.json', JSON.stringify(msg.obj, null, 2), 'config.json');
             },
-            getBackup(){
-                window.location = '/server/getDb';
-            }
+            openBackup() {
+                backupModal.show({
+                    title: '{{ i18n "pages.index.backupTitle" }}',
+                    description: '{{ i18n "pages.index.backupDescription" }}',
+                    exportText: '{{ i18n "pages.index.exportDatabase" }}',
+                    importText: '{{ i18n "pages.index.importDatabase" }}',
+                });
+            },
+            exportDatabase() {
+                window.location = basePath + 'server/getDb';
+            },
+            importDatabase() {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = '.db';
+                fileInput.addEventListener('change', async (event) => {
+                    const dbFile = event.target.files[0];
+                    if (dbFile) {
+                        const formData = new FormData();
+                        formData.append('db', dbFile);
+                        backupModal.hide();
+                        this.loading(true);
+                        const uploadMsg = await HttpUtil.post('server/importDB', formData, {
+                            headers: {
+                                'Content-Type': 'multipart/form-data',
+                            }
+                        });
+                        this.loading(false);
+                        if (!uploadMsg.success) {
+                            return;
+                        }
+                        this.loading(true);
+                        const restartMsg = await HttpUtil.post("/xui/setting/restartPanel");
+                        this.loading(false);
+                        if (restartMsg.success) {
+                            this.loading(true);
+                            await PromiseUtil.sleep(5000);
+                            location.reload();
+                        }
+                    }
+                });
+                fileInput.click();
+            },
         },
         async mounted() {
+            if (window.location.protocol !== "https:") {
+                this.showAlert = true;
+            }
             while (true) {
                 try {
                     await this.getStatus();

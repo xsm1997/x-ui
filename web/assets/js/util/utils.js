@@ -68,13 +68,11 @@ class HttpUtil {
 }
 
 class PromiseUtil {
-
     static async sleep(timeout) {
         await new Promise(resolve => {
             setTimeout(resolve, timeout)
         });
     }
-
 }
 
 const seq = [
@@ -90,7 +88,6 @@ const seq = [
 ];
 
 class RandomUtil {
-
     static randomIntRange(min, max) {
         return parseInt(Math.random() * (max - min) + min, 10);
     }
@@ -115,19 +112,6 @@ class RandomUtil {
         return str;
     }
 
-    static randomMTSecret() {
-        let str = '';
-        for (let i = 0; i < 32; ++i) {
-            let index = this.randomInt(16);
-            if (index <= 9) {
-                str += index;
-            } else {
-                str += seq[index - 10];
-            }
-        }
-        return str;
-    }
-
     static randomUUID() {
         let d = new Date().getTime();
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -137,19 +121,35 @@ class RandomUtil {
         });
     }
 
-    static randomText() {
+    static randomText(minLen = 6, varLen = 5) {
         var chars = 'abcdefghijklmnopqrstuvwxyz1234567890';
         var string = '';
-        var len = 6 + Math.floor(Math.random() * 5)
-        for(var ii=0; ii<len; ii++){
+        var len = minLen + Math.floor(Math.random() * varLen);
+        for (var ii = 0; ii < len; ii++) {
             string += chars[Math.floor(Math.random() * chars.length)];
         }
         return string;
     }
+
+    static randomShadowsocksPassword() {
+        let array = new Uint8Array(32);
+        window.crypto.getRandomValues(array);
+        return btoa(String.fromCharCode.apply(null, array));
+    }
+
+    static randomShortId() {
+        let shortIds = ['','','',''];
+        for (var ii = 0; ii < 4; ii++) {
+            for (var jj = 0; jj < this.randomInt(8); jj++){
+                let randomNum = this.randomInt(256);
+                shortIds[ii] += ('0' + randomNum.toString(16)).slice(-2)
+            }
+        }
+        return shortIds;
+    }
 }
 
 class ObjectUtil {
-
     static getPropIgnoreCase(obj, prop) {
         for (const name in obj) {
             if (!obj.hasOwnProperty(name)) {
@@ -297,5 +297,4 @@ class ObjectUtil {
         }
         return true;
     }
-
 }

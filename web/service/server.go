@@ -7,14 +7,18 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 	"x-ui/config"
+	"x-ui/database"
 	"x-ui/logger"
+	"x-ui/util/common"
 	"x-ui/util/sys"
 	"x-ui/xray"
 
@@ -35,9 +39,10 @@ const (
 )
 
 type Status struct {
-	T   time.Time `json:"-"`
-	Cpu float64   `json:"cpu"`
-	Mem struct {
+	T        time.Time `json:"-"`
+	Cpu      float64   `json:"cpu"`
+	CpuCount int       `json:"cpuCount"`
+	Mem      struct {
 		Current uint64 `json:"current"`
 		Total   uint64 `json:"total"`
 	} `json:"mem"`
@@ -66,6 +71,16 @@ type Status struct {
 		Sent uint64 `json:"sent"`
 		Recv uint64 `json:"recv"`
 	} `json:"netTraffic"`
+	AppStats struct {
+		Threads uint32 `json:"threads"`
+		Mem     uint64 `json:"mem"`
+		Uptime  uint64 `json:"uptime"`
+	} `json:"appStats"`
+	HostInfo struct {
+		HostName string `json:"hostname"`
+		Ipv4     string `json:"ipv4"`
+		Ipv6     string `json:"ipv6"`
+	} `json:"hostInfo"`
 }
 
 type Release struct {
@@ -73,7 +88,8 @@ type Release struct {
 }
 
 type ServerService struct {
-	xrayService XrayService
+	xrayService    XrayService
+	inboundService InboundService
 }
 
 func (s *ServerService) GetStatus(lastStatus *Status) *Status {
@@ -171,6 +187,36 @@ func (s *ServerService) GetStatus(lastStatus *Status) *Status {
 	}
 	status.Xray.Version = s.xrayService.GetXrayVersion()
 
+	var rtm runtime.MemStats
+	runtime.ReadMemStats(&rtm)
+
+	status.AppStats.Mem = rtm.Sys
+	status.AppStats.Threads = uint32(runtime.NumGoroutine())
+	status.CpuCount = runtime.NumCPU()
+	if p.IsRunning() {
+		status.AppStats.Uptime = p.GetUptime()
+	} else {
+		status.AppStats.Uptime = 0
+	}
+
+	status.HostInfo.HostName, _ = os.Hostname()
+
+	// get ip address
+	netInterfaces, _ := net.Interfaces()
+	for i := 0; i < len(netInterfaces); i++ {
+		if len(netInterfaces[i].Flags) > 2 && netInterfaces[i].Flags[0] == "up" && netInterfaces[i].Flags[1] != "loopback" {
+			addrs := netInterfaces[i].Addrs
+
+			for _, address := range addrs {
+				if strings.Contains(address.Addr, ".") {
+					status.HostInfo.Ipv4 += address.Addr + " "
+				} else if address.Addr[0:6] != "fe80::" {
+					status.HostInfo.Ipv6 += address.Addr + " "
+				}
+			}
+		}
+	}
+
 	return status
 }
 
@@ -194,9 +240,11 @@ func (s *ServerService) GetXrayVersions() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	versions := make([]string, 0, len(releases))
+	var versions []string
 	for _, release := range releases {
-		versions = append(versions, release.TagName)
+		if release.TagName >= "v1.8.0" {
+			versions = append(versions, release.TagName)
+		}
 	}
 	return versions, nil
 }
@@ -328,45 +376,40 @@ func (s *ServerService) UpdateXray(version string) error {
 
 }
 
-func (s *ServerService) GetLogs(count string) ([]string, error) {
-	// Define the journalctl command and its arguments
-	var cmdArgs []string
-	if runtime.GOOS == "linux" {
-		cmdArgs = []string{"journalctl", "-u", "x-ui", "--no-pager", "-n", count}
+func (s *ServerService) GetLogs(count string, level string, syslog string) []string {
+	c, _ := strconv.Atoi(count)
+	var lines []string
+
+	if syslog == "true" {
+		cmdArgs := []string{"journalctl", "-u", "x-ui", "--no-pager", "-n", count, "-p", level}
+		// Run the command
+		cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+		var out bytes.Buffer
+		cmd.Stdout = &out
+		err := cmd.Run()
+		if err != nil {
+			return []string{"Failed to run journalctl command!"}
+		}
+		lines = strings.Split(out.String(), "\n")
 	} else {
-		return []string{"Unsupported operating system"}, nil
+		lines = logger.GetLogs(c, level)
 	}
 
-	// Run the command
-	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
-	if err != nil {
-		return nil, err
-	}
-
-	lines := strings.Split(out.String(), "\n")
-
-	return lines, nil
+	return lines
 }
 
 func (s *ServerService) GetConfigJson() (interface{}, error) {
-	// Open the file for reading
-	file, err := os.Open(xray.GetConfigPath())
+	config, err := s.xrayService.GetXrayConfig()
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-
-	// Read the file contents
-	fileContents, err := io.ReadAll(file)
+	contents, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
 		return nil, err
 	}
 
 	var jsonData interface{}
-	err = json.Unmarshal(fileContents, &jsonData)
+	err = json.Unmarshal(contents, &jsonData)
 	if err != nil {
 		return nil, err
 	}
@@ -389,4 +432,130 @@ func (s *ServerService) GetDb() ([]byte, error) {
 	}
 
 	return fileContents, nil
+}
+
+func (s *ServerService) ImportDB(file multipart.File) error {
+	// Check if the file is a SQLite database
+	isValidDb, err := database.IsSQLiteDB(file)
+	if err != nil {
+		return common.NewErrorf("Error checking db file format: %v", err)
+	}
+	if !isValidDb {
+		return common.NewError("Invalid db file format")
+	}
+
+	// Reset the file reader to the beginning
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		return common.NewErrorf("Error resetting file reader: %v", err)
+	}
+
+	// Save the file as temporary file
+	tempPath := fmt.Sprintf("%s.temp", config.GetDBPath())
+	// Remove the existing fallback file (if any) before creating one
+	_, err = os.Stat(tempPath)
+	if err == nil {
+		errRemove := os.Remove(tempPath)
+		if errRemove != nil {
+			return common.NewErrorf("Error removing existing temporary db file: %v", errRemove)
+		}
+	}
+	// Create the temporary file
+	tempFile, err := os.Create(tempPath)
+	if err != nil {
+		return common.NewErrorf("Error creating temporary db file: %v", err)
+	}
+	defer tempFile.Close()
+
+	// Remove temp file before returning
+	defer os.Remove(tempPath)
+
+	// Save uploaded file to temporary file
+	_, err = io.Copy(tempFile, file)
+	if err != nil {
+		return common.NewErrorf("Error saving db: %v", err)
+	}
+
+	// Check if we can init db or not
+	err = database.InitDB(tempPath)
+	if err != nil {
+		return common.NewErrorf("Error checking db: %v", err)
+	}
+
+	// Stop Xray
+	s.StopXrayService()
+
+	// Backup the current database for fallback
+	fallbackPath := fmt.Sprintf("%s.backup", config.GetDBPath())
+	// Remove the existing fallback file (if any)
+	_, err = os.Stat(fallbackPath)
+	if err == nil {
+		errRemove := os.Remove(fallbackPath)
+		if errRemove != nil {
+			return common.NewErrorf("Error removing existing fallback db file: %v", errRemove)
+		}
+	}
+	// Move the current database to the fallback location
+	err = os.Rename(config.GetDBPath(), fallbackPath)
+	if err != nil {
+		return common.NewErrorf("Error backing up temporary db file: %v", err)
+	}
+
+	// Remove the temporary file before returning
+	defer os.Remove(fallbackPath)
+
+	// Move temp to DB path
+	err = os.Rename(tempPath, config.GetDBPath())
+	if err != nil {
+		errRename := os.Rename(fallbackPath, config.GetDBPath())
+		if errRename != nil {
+			return common.NewErrorf("Error moving db file and restoring fallback: %v", errRename)
+		}
+		return common.NewErrorf("Error moving db file: %v", err)
+	}
+
+	// Migrate DB
+	err = database.InitDB(config.GetDBPath())
+	if err != nil {
+		errRename := os.Rename(fallbackPath, config.GetDBPath())
+		if errRename != nil {
+			return common.NewErrorf("Error migrating db and restoring fallback: %v", errRename)
+		}
+		return common.NewErrorf("Error migrating db: %v", err)
+	}
+	s.inboundService.MigrateDB()
+
+	// Start Xray
+	err = s.RestartXrayService()
+	if err != nil {
+		return common.NewErrorf("Imported DB but Failed to start Xray: %v", err)
+	}
+
+	return nil
+}
+
+func (s *ServerService) GetNewX25519Cert() (interface{}, error) {
+	// Run the command
+	cmd := exec.Command(xray.GetBinaryPath(), "x25519")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(out.String(), "\n")
+
+	privateKeyLine := strings.Split(lines[0], ":")
+	publicKeyLine := strings.Split(lines[1], ":")
+
+	privateKey := strings.TrimSpace(privateKeyLine[1])
+	publicKey := strings.TrimSpace(publicKeyLine[1])
+
+	keyPair := map[string]interface{}{
+		"privateKey": privateKey,
+		"publicKey":  publicKey,
+	}
+
+	return keyPair, nil
 }
